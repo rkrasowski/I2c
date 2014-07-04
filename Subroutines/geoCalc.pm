@@ -181,4 +181,18 @@ sub distance
         }
 
 
+sub updateLastGPS       
+        {
+                open my $CURRENTPOS, "/mnt/ramdisk/gps.dat" or die "$!";
+                my $currentPos = (<$CURRENTPOS>);
+                close $CURRENTPOS;
+
+                open my $LASTPOS, ">/home/ubuntu/GPS/lastGPS.dat" or die "$!";
+                print $LASTPOS $currentPos;
+                close $LASTPOS;
+
+        }
+
+
+
 1;
