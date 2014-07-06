@@ -20,7 +20,7 @@ my $rx;
 my $RI;
 my $numOfMessages;
 my $inMessage;
-my $outMessage = "testing sat system";
+my $outMessage = "%% Command test first";
 our $debug = 1; 
 
 
@@ -413,36 +413,53 @@ sub readMessage {
                                 {
                                         debug("Buffer cleaned succesfully\n");
                                 }
-                        debug("Received message is: $inMessage\n");
-			my $mailNumber = mailNumber();
-			open my $MAIL, ">/home/ubuntu/Mail/Current/$mailNumber" or die "Could not create file $!";
-			print $MAIL $inMessage;
-			close ($MAIL);
-                
-                        debug("Mail was filed as $mailNumber into Current directory");
+                        debug("Received message is: $inMessage");
 
+
+				if ($inMessage =~ m/%%/)	# check if this is regular mail or command
+					{
+						commandProcess();
+						debug("Command was received: $inMessage");
+
+					}
+				else 
+					{
+						my $mailNumber = mailNumber();
+						open my $MAIL, ">/home/ubuntu/Mail/Current/$mailNumber" or die "Could not create file $!";
+						print $MAIL $inMessage;
+						close ($MAIL);
+                
+                        			debug("Mail was filed as $mailNumber into Current directory");
+					}
         }
+
 
 sub mailNumber 
         {
 
-                my $mailList = ` ls /home/ubuntu/Mail/Current/`;
-                my @listArray = split (/\n/,$mailList);
-                my $listArray;
+                my $mailListCurr = ` ls /home/ubuntu/Mail/Current/`;
+                my @listArrayCurr = split (/\n/,$mailListCurr);
+                my $listArrayCurr;
                 my @finalArray;
 
-                foreach(@listArray)
+                foreach(@listArrayCurr)
                         {
-                                my @elementArray = split (/\./,$_);
-                                my $elemantArray;
-                                print "Number is $elementArray[0]\n";
-                                push (@finalArray,$elementArray[0]);
+                                my @elementArrayCurr = split (/\./,$_);
+                                my $elemantArrayCurr;
+                                push (@finalArray,$elementArrayCurr[0]);
                         }
 
-                foreach(@finalArray)
+                my $mailListRead = ` ls /home/ubuntu/Mail/Read/`;
+                my @listArrayRead = split (/\n/,$mailListRead);
+                my $listArrayRead;
+
+                foreach(@listArrayRead)
                         {
-                                print"Final: $_\n";
+                                my @elementArrayRead = split (/\./,$_);
+                                my $elemantArrayRead;
+                                push (@finalArray,$elementArrayRead[0]);
                         }
+
 
                 my $max = max(@finalArray);
                 $max = $max+1;
@@ -450,3 +467,43 @@ sub mailNumber
                 return $max;
         }
 
+sub commandNum
+        {
+                my $max;
+                my $comNum = ` ls /home/ubuntu/Mail/Commands/`;
+                my @listArrayCom = split (/\n/,$comNum);
+                my $listArrayCom;
+                my @finalArray;
+
+                if (@listArrayCom)
+                        {
+                                foreach(@listArrayCom)
+                                        {
+                                                my @elementArrayCom = split (/\./,$_);
+                                                my $elemantArrayCom;
+                                                push (@finalArray,$elementArrayCom[0]);
+                                        }
+
+                                $max = max(@finalArray);
+                                $max = $max+1;
+                                $max  = "$max"."."."txt";
+                                return $max;
+                        }
+                else
+                        {
+                                $max = "1"."."."txt";
+                                return $max;
+                        }
+        }
+
+
+sub commandProcess
+	{
+		debug("Command is being processed");
+		
+		 my $commandNum = commandNum();				# putting command into archives
+                 open my $COMMAND, ">/home/ubuntu/Mail/Commands/$commandNum" or die "Could not create file $!";
+                                                print $COMMAND $inMessage;
+                                                close ($COMMAND);
+		
+	}
