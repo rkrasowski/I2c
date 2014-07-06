@@ -4,6 +4,8 @@ use warnings;
 use POSIX qw(floor ceil);
 use Device::SerialPort;
 use Time::Local;
+use List::Util qw( min max );
+
 use version; our $VERSION = qv('1.0.1');
 require "/home/ubuntu/Subroutines/debug.pm";
 
@@ -45,21 +47,21 @@ sleep(1);
 checkModem();
 
 #print"Checking buffer\n";
-checkBuffer();
+#checkBuffer();
 #checkRI();
-satCom();
+#satCom();
 #signalNetwork();
 #sendMessage($outMessage);
 #readMessage();
 #test();
 #print" Check ring:\n";
 #checkRI(); 
-#message2MO();
+message2MO();
 checkBuffer();
-#MOMT();
+MOMT();
 #test();
 #checkBuffer();
-
+readMessage();
 
 
 sub monitor 
@@ -412,7 +414,39 @@ sub readMessage {
                                         debug("Buffer cleaned succesfully\n");
                                 }
                         debug("Received message is: $inMessage\n");
-                        return $inMessage;
+			my $mailNumber = mailNumber();
+			open my $MAIL, ">/home/ubuntu/Mail/Current/$mailNumber" or die "Could not create file $!";
+			print $MAIL $inMessage;
+			close ($MAIL);
+                
+                        debug("Mail was filed as $mailNumber into Current directory");
 
+        }
+
+sub mailNumber 
+        {
+
+                my $mailList = ` ls /home/ubuntu/Mail/Current/`;
+                my @listArray = split (/\n/,$mailList);
+                my $listArray;
+                my @finalArray;
+
+                foreach(@listArray)
+                        {
+                                my @elementArray = split (/\./,$_);
+                                my $elemantArray;
+                                print "Number is $elementArray[0]\n";
+                                push (@finalArray,$elementArray[0]);
+                        }
+
+                foreach(@finalArray)
+                        {
+                                print"Final: $_\n";
+                        }
+
+                my $max = max(@finalArray);
+                $max = $max+1;
+                $max  = "$max"."."."txt";
+                return $max;
         }
 
