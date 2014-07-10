@@ -5,6 +5,7 @@ use POSIX qw(floor ceil);
 use Device::SerialPort;
 use Time::Local;
 #use Geo::Calc;
+use List::Util qw( min max );
 
 
 use version; our $VERSION = qv('1.0.1');
@@ -14,6 +15,9 @@ use version; our $VERSION = qv('1.0.1');
 require "/home/ubuntu/Subroutines/config.pm";
 require "/home/ubuntu/Subroutines/debug.pm";
 require "/home/ubuntu/Subroutines/geoCalc.pm";
+require "/home/ubuntu/Subroutines/modem.pm";
+require "/home/ubuntu/Subroutines/mail.pm";
+
 
 our $debug = 1;          # 0 - no debug, 1-is terminal STOUT, 2-STOUT to Log/main.log
 my $PORT = "/dev/ttyO4";	# Iridium port
@@ -41,6 +45,7 @@ my $startLat;
 my $startLon;
 my $finishLat;
 my $finishLon;
+my $telMessage = "Telemetry message";
 
 
 
@@ -52,7 +57,7 @@ debug("Main script starts");
 
 debug("Opening communication to Iridium modem");
 
-my $ob = Device::SerialPort->new($PORT) || die "Can't Open $PORT: $!";
+our $ob = Device::SerialPort->new($PORT) || die "Can't Open $PORT: $!";
 
 $ob->baudrate(19200) || die "failed setting baudrate";
 $ob->parity("none") || die "failed setting parity";
@@ -63,7 +68,7 @@ $| = 1;
 
 debug("Serial port ttyO4 to iridium is open");
 sleep(1);
-#checkModem();
+checkModem();
 
 
 		
@@ -115,7 +120,7 @@ while (1)
 				debug("TelMode is 1, so will send data every $telTime h");
 		
 				TIMENEW:
-				$telSeconds = $telTime * 1;
+				$telSeconds = $telTime * 60;
 				my $currentTime = time();
 				my $execTime = $currentTime + $telSeconds - 1;
 			
@@ -128,14 +133,26 @@ while (1)
 						if( $pid == 0 )
 							{
    								debug("Sending telemetry message");
-   								print "Child process is existing\n";
+								sendMessage($telMessage);
    								sleep(1);
-								exit 0;
 								
 							}
 						goto TIMENEW;
 					}
-				sleep(1);
+
+				# Check if any message is waiting to be retrieve
+			
+				print "Checking for RI\n";
+				my $RI = checkRI();
+               			if ($RI != 0)
+                        		{
+                                		print "Ring was received, will retrieve message\n";
+                                		satCom();
+                        		}
+
+
+				
+				sleep(10);
 				
 				# Check if telMode was changed 
 				my  $newTelMode = getTelMode();
@@ -179,16 +196,19 @@ while (1)
 				my $distance = distanceCalc();		
                                 if  ($distance  > $distance2Be)
                                         {
-                                                my $pid = fork();
+					        my $pid = fork();
                                                 if( $pid == 0 )
                                                         {
-                                                                debug("Sending telemetry message");
-                                                                print "Child process is existing\n";
+                                                       		
+							        debug("Sending telemetry message after Distance was exeded");
+                                                                print "Child process is existing after distance was exeded\n";
+												
                                                                 sleep(1);
-                                                                exit 0;
-
+								exit(0);
+								
                                                         }
-                                                goto DISTANCENEW;
+						updateLastGPS();
+						goto DISTANCENEW;
                                         }
                                 sleep(1);
 
@@ -202,6 +222,7 @@ while (1)
                                         }
 
                                 my $newDistance2Be = getTelTime();
+				$newDistance2Be = $newDistance2Be *10;
 
                                 # check if distance  was changed
                                 if ($newDistance2Be != $distance2Be)
@@ -219,47 +240,8 @@ while (1)
 	}
 
 
-###############################################  Subroutines ##################################################
-
-
-sub distance 
-	{
-		my $startLat = shift;
-                my $startLon = shift;
-                my $finishLat = shift;
-                my $finishLon = shift;	
-		my $gc = Geo::Calc->new( lat => $startLat, lon => $startLon, units => 'mi' ); # Somewhere in Madrid
-		my $distance =  $gc->distance_to( { lat => $finishLat, lon => $finishLon},-1 );
-		return  $distance;
-	}
 
 
 
-
-
-sub checkModem
-        {
-
-                my $i =1;
-
-                while ($i < 30)
-                        {
-
-                                $ob->write("AT\r");
-                                debug("Checking if modem is accesable....trial $i");
-                                $i++;
-                                sleep(1);
-
-                                $rx = $ob->read(255);
-                                if ($rx =~ m/OK/)
-                                        {
-                                                goto READY;
-                                        }
-                        }
-                        debug("Can\'t find Iridium 9602 !!");
-                         exit();
-
-                READY:{debug("Iridium 9602 identyfied and ready to work....");}
-        }
 
 
