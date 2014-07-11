@@ -17,6 +17,8 @@ require "/home/ubuntu/Subroutines/debug.pm";
 require "/home/ubuntu/Subroutines/geoCalc.pm";
 require "/home/ubuntu/Subroutines/modem.pm";
 require "/home/ubuntu/Subroutines/mail.pm";
+require "/home/ubuntu/Subroutines/time.pm";
+
 
 
 our $debug = 1;          # 0 - no debug, 1-is terminal STOUT, 2-STOUT to Log/main.log
@@ -45,7 +47,7 @@ my $startLat;
 my $startLon;
 my $finishLat;
 my $finishLon;
-my $telMessage = "Telemetry message";
+my $telMessage = `date`;
 
 
 
@@ -104,7 +106,7 @@ while (1)
 
 
 
-		if ($telMode !~ m/[0-3]/)
+		if ($telMode !~ m/[0-4]/)
 			{
 				$telMode = 1;
 				debug("telemetry mode is wrong, will use 1 as default");
@@ -119,9 +121,22 @@ while (1)
 			
 				debug("TelMode is 1, so will send data every $telTime h");
 		
-				TIMENEW:
-				$telSeconds = $telTime * 60;
+				$telSeconds = $telTime * 30;
+				# Check from record how much time passed from last report
+				my $lastRepTime = lastRapTime();
+				my $lastExpectedTime = $lastRepTime + $telSeconds; 
 				my $currentTime = time();
+				
+				if  ($currentTime > $lastExpectedTime)
+                                        {
+                                         	debug("Sending telemetry message when lastExpected time is ready");
+                                               # sendMessage($telMessage);
+                                                sleep(1);
+                                                recordRapTime();
+                                        }
+
+				TIMENEW:
+		
 				my $execTime = $currentTime + $telSeconds - 1;
 			
 				TIMESTART:
@@ -129,14 +144,10 @@ while (1)
 				# check if this is a time to end telemetry
 				if  ($currentTime > $execTime)
 					{
-						my $pid = fork();
-						if( $pid == 0 )
-							{
-   								debug("Sending telemetry message");
-								sendMessage($telMessage);
-   								sleep(1);
-								
-							}
+   						debug("Time is up, sending telemetry");
+							#	sendMessage($telMessage);
+   						sleep(1);
+						recordRapTime();								
 						goto TIMENEW;
 					}
 
@@ -147,12 +158,12 @@ while (1)
                			if ($RI != 0)
                         		{
                                 		print "Ring was received, will retrieve message\n";
-                                		satCom();
+                                		#satCom();
                         		}
 
 
 				
-				sleep(10);
+				sleep(5);
 				
 				# Check if telMode was changed 
 				my  $newTelMode = getTelMode();
