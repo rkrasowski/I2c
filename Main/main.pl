@@ -4,7 +4,7 @@ use warnings;
 use POSIX qw(floor ceil);
 use Device::SerialPort;
 use Time::Local;
-#use Geo::Calc;
+use Geo::Calc;
 use List::Util qw( min max );
 
 
@@ -27,6 +27,7 @@ my $PORT = "/dev/ttyO4";	# Iridium port
 
 my $telMode;
 my $telTime;
+my $telDistance;
 my $telSeconds;
 my $BTON;
 my $BTOFF;
@@ -80,6 +81,8 @@ $telMode = getTelMode();
 debug("Tel mode is $telMode");
 $telTime = getTelTime();
 debug("TelTime is $telTime h");
+$telDistance = getTelDistance();
+debug("TelDistance is $telDistance miles");
 $BTON = getBTON();
 debug("BTOn is for $BTON sec");
 $BTOFF = getBTOFF();
@@ -121,7 +124,7 @@ while (1)
 			
 				debug("TelMode is 1, so will send data every $telTime h");
 		
-				$telSeconds = $telTime * 30;
+				$telSeconds = $telTime * 300;
 				# Check from record how much time passed from last report
 				my $lastRepTime = lastRapTime();
 				my $lastExpectedTime = $lastRepTime + $telSeconds; 
@@ -190,38 +193,123 @@ while (1)
 
 			}
 		elsif ($telMode == 2)
-			{
+			{	
 				debug("TelMode is 2, so telemetry will be sent every $telTime miles");
-				
+
 				DISTANCENEW:
                                 
-				
-				my $distance2Be = getTelTime();
-                        	$distance2Be = $distance2Be *10;        
+
+				my $distance2Be = getTelDistance();
+                         	$distance2Be = $distance2Be *10;
                             
 
                                 DISTANCESTART:
 
 
                                 # check if distance is long enough to send telemetry message
-				my $distance = distanceCalc();		
-                                if  ($distance  > $distance2Be)
+				my $distance = distanceCalc();	
+                                if ($distance > $distance2Be)
                                         {
-					        my $pid = fork();
-                                                if( $pid == 0 )
-                                                        {
-                                                       		
-							        debug("Sending telemetry message after Distance was exeded");
-                                                                print "Child process is existing after distance was exeded\n";
-												
-                                                                sleep(1);
-								exit(0);
-								
-                                                        }
+						debug("Sending telemetry message after Distance was exeded");
+                                                sleep(1);
 						updateLastGPS();
 						goto DISTANCENEW;
                                         }
-                                sleep(1);
+                                sleep(10);
+			
+                                # Check if telMode was changed
+                                my $newTelMode = getTelMode();
+                                if ($newTelMode != $telMode)
+                                        {
+                                                print "New tel mode detected\n";
+                                                $telMode = $newTelMode;
+                                                goto BEGINING;
+                                        }
+
+                                my $newDistance2Be = getTelDistance();
+				$newDistance2Be = $newDistance2Be *10;
+
+                                # check if distance was changed
+                                if ($newDistance2Be != $distance2Be)
+                                        {
+                                                print "New distance is introduced\n";
+                                                $distance2Be = $newDistance2Be;
+                                                goto DISTANCENEW;
+                                        }
+
+                                goto DISTANCESTART;
+
+
+			}
+
+		 elsif ($telMode == 3)
+                        {
+
+                                debug("TelMode is 3, so will send data every $telTime h or every $telDistance miles, whatever comes first");
+
+                                $telSeconds = $telTime * 300;
+                                # Check from record how much time passed from last report
+                                my $lastRepTime = lastRapTime();
+                                my $lastExpectedTime = $lastRepTime + $telSeconds;
+                                my $currentTime = time();
+
+                                if  ($currentTime > $lastExpectedTime)
+                                        {
+                                                debug("Sending telemetry message when lastExpected time is ready");
+                                               # sendMessage($telMessage);
+                                                sleep(1);
+                                                recordRapTime();
+						updateLastGPS();
+                                        }
+
+                                TIMENEW:
+
+                                my $execTime = $currentTime + $telSeconds - 1;
+
+                                TIMESTART:
+
+                                # check if this is a time to end telemetry
+                                if  ($currentTime > $execTime)
+                                        {
+                                                debug("Time is up, sending telemetry");
+                                                        #       sendMessage($telMessage);
+                                                sleep(1);
+                                                recordRapTime();
+						updateLastGPS();
+                                                goto TIMENEW;
+                                        }
+				
+
+
+                                my $distance2Be = getTelDistance();
+                                $distance2Be = $distance2Be *10;
+
+
+
+
+                                # check if distance is long enough to send telemetry message
+                                my $distance = distanceCalc();
+                                if ($distance > $distance2Be)
+                                        {
+                                                debug("Sending telemetry message after Distance was exeded");
+                                                sleep(1);
+                                                updateLastGPS();
+						recordRapTime();
+                                                goto TIMENEW;
+                                        }
+                              
+
+                                # Check if any message is waiting to be retrieve
+
+                                print "Checking for RI\n";
+                                my $RI = checkRI();
+                                if ($RI != 0)
+                                        {
+                                                print "Ring was received, will retrieve message\n";
+                                                #satCom();
+                                        }
+
+				  sleep(5);
 
                                 # Check if telMode was changed 
                                 my  $newTelMode = getTelMode();
@@ -232,22 +320,34 @@ while (1)
                                                 goto BEGINING;
                                         }
 
-                                my $newDistance2Be = getTelTime();
-				$newDistance2Be = $newDistance2Be *10;
+                                $currentTime = time();
+                                my $newTelTime = getTelTime();
 
-                                # check if distance  was changed
-                                if ($newDistance2Be != $distance2Be)
+                                # check if telTime was changed
+                                if ($newTelTime != $telTime)
                                         {
-                                                print "New distance is  introduced\n";
-                                                $distance2Be = $newDistance2Be;
-                                                goto DISTANCENEW;
+                                                print "New telTime introduced\n";
+                                                $telTime = $newTelTime;
+                                                goto TIMENEW;
                                         }
 
-                                goto DISTANCESTART;
+				# check in distance was changed
+				my $newDistance2Be = getTelDistance();
+                                $newDistance2Be = $newDistance2Be *10;
 
-			}
+				 if ($newDistance2Be != $distance2Be)
+                                        {
+                                                print "New distance is introduced\n";
+                                                $distance2Be = $newDistance2Be;
+                                                goto TIMENEW;
+                                        }
 
-		sleep(5);
+                                goto TIMESTART;
+
+
+                        }
+
+
 	}
 
 
