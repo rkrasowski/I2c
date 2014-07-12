@@ -51,8 +51,6 @@ my $finishLon;
 my $telMessage = `date`;
 
 
-
-
 debug("Main script starts");
 
 #`sudo /home/ubuntu/start/startSetDate.pl`;
@@ -138,11 +136,11 @@ while (1)
                                                 recordRapTime();
                                         }
 
-				TIMENEW:
+				TIMENEW1:
 		
 				my $execTime = $currentTime + $telSeconds - 1;
 			
-				TIMESTART:
+				TIMESTART1:
 					
 				# check if this is a time to end telemetry
 				if  ($currentTime > $execTime)
@@ -151,7 +149,7 @@ while (1)
 							#	sendMessage($telMessage);
    						sleep(1);
 						recordRapTime();								
-						goto TIMENEW;
+						goto TIMENEW1;
 					}
 
 				# Check if any message is waiting to be retrieve
@@ -185,10 +183,10 @@ while (1)
 					{
 						print "New telTime introduced\n";
 						$telTime = $newTelTime;
-						goto TIMENEW;
+						goto TIMENEW1;
 					}
 				
-				goto TIMESTART;
+				goto TIMESTART1;
 				
 
 			}
@@ -196,26 +194,28 @@ while (1)
 			{	
 				debug("TelMode is 2, so telemetry will be sent every $telTime miles");
 
-				DISTANCENEW:
+				DISTANCENEW2:
                                 
 
 				my $distance2Be = getTelDistance();
                          	$distance2Be = $distance2Be *10;
                             
 
-                                DISTANCESTART:
+                                DISTANCESTART2:
 
 
                                 # check if distance is long enough to send telemetry message
-				my $distance = distanceCalc();	
+				my $distance = distanceCalc();
+				$distance = $distance * 10;
+				print "distance is: $distance\n";	
                                 if ($distance > $distance2Be)
                                         {
 						debug("Sending telemetry message after Distance was exeded");
                                                 sleep(1);
 						updateLastGPS();
-						goto DISTANCENEW;
+						goto DISTANCENEW2;
                                         }
-                                sleep(10);
+                                sleep(5);
 			
                                 # Check if telMode was changed
                                 my $newTelMode = getTelMode();
@@ -228,16 +228,17 @@ while (1)
 
                                 my $newDistance2Be = getTelDistance();
 				$newDistance2Be = $newDistance2Be *10;
-
+				
                                 # check if distance was changed
                                 if ($newDistance2Be != $distance2Be)
                                         {
                                                 print "New distance is introduced\n";
                                                 $distance2Be = $newDistance2Be;
-                                                goto DISTANCENEW;
+                                                goto DISTANCENEW2;
                                         }
+	
 
-                                goto DISTANCESTART;
+                                goto DISTANCESTART2;
 
 
 			}
@@ -247,7 +248,7 @@ while (1)
 
                                 debug("TelMode is 3, so will send data every $telTime h or every $telDistance miles, whatever comes first");
 
-                                $telSeconds = $telTime * 300;
+                                $telSeconds = $telTime * 10;
                                 # Check from record how much time passed from last report
                                 my $lastRepTime = lastRapTime();
                                 my $lastExpectedTime = $lastRepTime + $telSeconds;
@@ -255,28 +256,29 @@ while (1)
 
                                 if  ($currentTime > $lastExpectedTime)
                                         {
-                                                debug("Sending telemetry message when lastExpected time is ready");
+                                                debug("Mode 3: Sending telemetry message when lastExpected time is ready");
                                                # sendMessage($telMessage);
                                                 sleep(1);
                                                 recordRapTime();
 						updateLastGPS();
                                         }
 
-                                TIMENEW:
+                                TIMENEW3:
 
                                 my $execTime = $currentTime + $telSeconds - 1;
 
-                                TIMESTART:
+                                TIMESTART3:
 
                                 # check if this is a time to end telemetry
+				$currentTime = time();
                                 if  ($currentTime > $execTime)
                                         {
-                                                debug("Time is up, sending telemetry");
+                                                debug("Mode 3: Time is up, sending telemetry");
                                                         #       sendMessage($telMessage);
                                                 sleep(1);
                                                 recordRapTime();
 						updateLastGPS();
-                                                goto TIMENEW;
+                                                goto TIMENEW3;
                                         }
 				
 
@@ -285,17 +287,19 @@ while (1)
                                 $distance2Be = $distance2Be *10;
 
 
-
-
                                 # check if distance is long enough to send telemetry message
                                 my $distance = distanceCalc();
+				print "Distance 2be $distance2Be\n";
+				print "Distance now $distance\n";
+
+
                                 if ($distance > $distance2Be)
                                         {
-                                                debug("Sending telemetry message after Distance was exeded");
+                                                debug("Mode 3: Sending telemetry message after Distance was exeded");
                                                 sleep(1);
                                                 updateLastGPS();
 						recordRapTime();
-                                                goto TIMENEW;
+                                                goto TIMENEW3;
                                         }
                               
 
@@ -313,22 +317,22 @@ while (1)
 
                                 # Check if telMode was changed 
                                 my  $newTelMode = getTelMode();
+				print"New TelMode is: $newTelMode\n\n";
                                 if ($newTelMode != $telMode)
                                         {
-                                                print "New tel mode detected\n";
+                                                print "Mode 3: New tel mode detected\n";
                                                 $telMode = $newTelMode;
                                                 goto BEGINING;
                                         }
 
-                                $currentTime = time();
-                                my $newTelTime = getTelTime();
+				 # check if telTime was changed
 
-                                # check if telTime was changed
+                                my $newTelTime = getTelTime();
                                 if ($newTelTime != $telTime)
                                         {
-                                                print "New telTime introduced\n";
+                                                print "Mode 3: New telTime introduced\n";
                                                 $telTime = $newTelTime;
-                                                goto TIMENEW;
+                                                goto TIMENEW3;
                                         }
 
 				# check in distance was changed
@@ -337,12 +341,12 @@ while (1)
 
 				 if ($newDistance2Be != $distance2Be)
                                         {
-                                                print "New distance is introduced\n";
+                                                print "Mode 3: New distance is introduced\n";
                                                 $distance2Be = $newDistance2Be;
-                                                goto TIMENEW;
+                                                goto TIMENEW3;
                                         }
 
-                                goto TIMESTART;
+                                goto TIMESTART3;
 
 
                         }
