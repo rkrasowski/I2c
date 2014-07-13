@@ -371,7 +371,7 @@ sub commandProcess
 				debug("As per command config.last, config.dat was changed and command put into archives");
 
 			}
-		 if ($commandDesign =~ m/sp/i)		# request to send position now
+		 if ($commandDesign =~ m/st/i)		# request to send position now
 			{
 				# Remove SP from Command
                                 shift @commandArray;

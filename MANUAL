@@ -1,0 +1,9 @@
+Commands format:
+%%cf12345678
+	pos 1,2 %% 	- indicate command
+	pos 3,4 cf 	- indicate command type
+	rest 		- command parts 
+
+Commands :
+	cf 	- configuration file change
+	st 	- send telemetry 
