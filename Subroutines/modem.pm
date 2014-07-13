@@ -174,10 +174,8 @@ sub satCom
                 signalNetwork();        # check the network and wait for good signal
                 debug("Executing SBDIXA command");
 
-                $ob->write("AT+SBDIXA\r");
-#               
-                 $rx = $ob->read(255);
-#               
+                $ob->write("AT+SBDIXA\r");              
+                $rx = $ob->read(255);              
                 do
                         {
                                 sleep(1);
@@ -271,7 +269,7 @@ sub readMessage {
 
                                 if ($inMessage =~ m/%%/)        # check if this is regular mail or command
                                         {
-                                                commandProcess();
+                                                commandProcess($inMessage);
                                                 debug("Command was received: $inMessage");
 
                                         }
@@ -338,5 +336,78 @@ sub sendMessage
                         }
         }
 
+sub commandProcess
+	{
+		my $command = shift;
+		my @commandArray = split(//,$command);
+		my $commandArray;
+		# Remove %%
+		shift @commandArray;
+		shift @commandArray;
+		# Check what kind of command it is
+		my $commandDesign = "$commandArray[0]"."$commandArray[1]";
+		
+		if ($commandDesign =~ m/cf/)
+			{
+				# Remove CF for Configuration
+		                shift @commandArray;
+                		shift @commandArray;
+				 # Remove CF for Configuration
+                		shift @commandArray;
+                		shift @commandArray;
+
+				# Put command to archives
+				my $commandNum = commandNum();  
+				open my $COMMANDARCH, ">/home/ubuntu/Mail/Commands/$commandNum" or die "Could not create file $!";
+				print $COMMANDARCH $command;
+				close $COMMANDARCH;
+				
+				# Change command in config.dat
+				open my $COMMANDDAT, ">/mnt/ramdisk/config.dat" or die "Could not create file $!";
+                                print $COMMANDDAT @commandArray;
+                                close $COMMANDDAT;
+
+				# Change command in confi.last
+				open my $COMMANDLAST, ">/home/ubuntu/Config/config.last" or die "Could not create file $!";
+                                print $COMMANDLAST @commandArray;
+                                close $COMMANDLAST;
+				debug("As per command config.last, config.dat was changed and command put into archives");
+
+			}
+		# Remove CF for Configuration
+		shift @commandArray;
+                shift @commandArray;
+
+
+	}
+
+sub commandNum
+        {
+                my $max;
+                my $comNum = ` ls /home/ubuntu/Mail/Commands/`;
+                my @listArrayCom = split (/\n/,$comNum);
+                my $listArrayCom;
+                my @finalArray;
+
+                if (@listArrayCom)
+                        {
+                                foreach(@listArrayCom)
+                                        {
+                                                my @elementArrayCom = split (/\./,$_);
+                                                my $elemantArrayCom;
+                                                push (@finalArray,$elementArrayCom[0]);
+                                        }
+
+                                $max = max(@finalArray);
+                                $max = $max+1;
+                                $max  = "$max"."."."txt";
+                                return $max;
+                        }
+                else
+                        {
+                                $max = "1"."."."txt";
+                                return $max;
+                        }
+        }
 
 1;
