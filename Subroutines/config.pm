@@ -1,18 +1,16 @@
-#!/usr/bin/perl
-use warnings;
-use strict;
 
 # pos 0 - telemetry mode
-# pos 1,2 - telemetry time or distance
+# pos 1,2 - telemetry TIME  (time in hours, distance in tenth of  mile so 01 is 1h or 10 miles
+# pos 3,4 - telemetry DISTANCE (in 10 of miles, so 1 - 10 miles) 
 # pos 3,4 - BTON for number of minutes
 # pos 5,6 - BTOFF for number of hours
 # pos 7 - LED mode
 # pos 8 - Confirmatory mode
 # pos 9 - GPS mode 	- 0 - nothing
-#					- 1 - transmiting NMEA0183 via serial port
+#			- 1 - transmiting NMEA0183 via serial port
 
 
-my $reading = 1;	# 0 - no debug  1 = debug
+my $reading = 0;	# 0 - no debug  1 = debug
 
 #my $all = getAll();
 #print "All before $all\n";
@@ -25,7 +23,7 @@ if ($reading == 1)
 
 		my $telMode = getTelMode();
 		print "Tel mode is $telMode\n";
-		changeTelMode(0);
+		changeTelMode(1);
 		$telMode = getTelMode();
 		print "Tel mode after is $telMode\n";
 
@@ -34,6 +32,12 @@ if ($reading == 1)
 		changeTelTime(01);
 		$telTime = getTelTime();
 		print "TelTime after: $telTime\n";
+
+		my $telDistance = getTelDistance();
+                print "telDistance  before: $telDistance\n";
+                changeTelDistance(05);
+                $telDistance = getTelDistance();
+                print "TelDistance after: $telDistance\n";
 
 		my $BTON = getBTON();
 		print "BTON before: $BTON\n";
@@ -49,19 +53,19 @@ if ($reading == 1)
 
 		my $ledMode = getLEDMode();
 		print "LEDMode before: $ledMode\n";
-		changeLEDMode(9);
+		changeLEDMode(1);
 		$ledMode = getLEDMode();
 		print "LEDMode after: $ledMode\n";
 
 		my $confirmMode = getConfirmMode();
 		print "confirmMode before: $confirmMode\n";
-		changeConfirmMode(8);
+		changeConfirmMode(0);
 		$confirmMode = getConfirmMode();
 		print "ConfirmMode after: $confirmMode\n";
 
 		my $gpsMode = getGPSMode();
 		print "GPSMode before: $gpsMode\n";
-		changeGPSMode(1);
+		changeGPSMode(0);
 		$gpsMode = getGPSMode();
 		print "gpsMode after: $gpsMode\n";
 
@@ -76,7 +80,7 @@ if ($reading == 1)
 ################################### Subroutines ###########################
 sub getAll
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		chomp $data;
 		my @dataArray = split(//,$data);
@@ -91,7 +95,7 @@ sub getAll
 
 sub getTelMode
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -111,14 +115,14 @@ sub changeTelMode
 			}
 		else 
 			{
-				open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+				open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 				my $data = (<$READ>);
 				chomp $data;
 				my @dataArray = split(//,$data);
 				my $dataArray;	
 				$dataArray[0] = $newMode;
 				$data = join('',@dataArray);
-				open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";	
+				open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";	
 				print $WRITE "$data";
 				close $READ;
 				close $WRITE;
@@ -128,7 +132,7 @@ sub changeTelMode
 
 sub getTelTime
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -141,7 +145,7 @@ sub changeTelTime
 	{
 		my $newTelTime = shift;
 		$newTelTime = sprintf("%02d",$newTelTime);
-		open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+		open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 		my $data = (<$READ>);
 		chomp $data;
 		my @dataArray = split(//,$data);
@@ -152,7 +156,7 @@ sub changeTelTime
 		$dataArray[1] = $telTime[0];
 		$dataArray[2] = $telTime[1];
 		$data = join('',@dataArray);
-		open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";	
+		open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";	
 		print $WRITE "$data";
 		close $READ;
 		close $WRITE;
@@ -160,10 +164,41 @@ sub changeTelTime
 
 
 
+sub getTelDistance
+        {
+                open (my $CONFIG, '/mnt/ramdisk/config.dat');
+                my $data =  (<$CONFIG>);
+                my @dataArray = split(//,$data);
+                my $dataArray;
+                close $CONFIG;
+                return "$dataArray[3]"."$dataArray[4]";
+        }
+
+
+sub changeTelDistance
+        {
+                my $newTelTime = shift;
+                $newTelTime = sprintf("%02d",$newTelTime);
+                open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
+                my $data = (<$READ>);
+                chomp $data;
+                my @dataArray = split(//,$data);
+                my $dataArray;
+                my @telTime = split(//,$newTelTime);
+                my $telTime;
+
+                $dataArray[3] = $telTime[0];
+                $dataArray[4] = $telTime[1];
+                $data = join('',@dataArray);
+                open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";
+                print $WRITE "$data";
+                close $READ;
+                close $WRITE;
+        }
 
 sub getBTON
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -175,7 +210,7 @@ sub changeBTON
 	{
 		my $newBTON = shift;
 		$newBTON = sprintf("%02d",$newBTON);
-		open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+		open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 		my $data = (<$READ>);
 		chomp $data;
 		my @dataArray = split(//,$data);
@@ -188,7 +223,7 @@ sub changeBTON
 
 		my $dataBTON = join('',@dataArray);
 	
-		open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";	
+		open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";	
 		print $WRITE "$dataBTON";
 		close $READ;
 		close $WRITE;
@@ -197,7 +232,7 @@ sub changeBTON
 
 sub getBTOFF
         {
-                open (my $CONFIG, '/home/ubuntu/Config/config.last');
+                open (my $CONFIG, '/mnt/ramdisk/config.dat');
                 my $data =  (<$CONFIG>);
                 my @dataArray = split(//,$data);
                 my $dataArray;
@@ -209,7 +244,7 @@ sub changeBTOFF
         {
                 my $newBTOFF = shift;
 		$newBTOFF = sprintf("%02d",$newBTOFF);
-                open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+                open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
                 my $data = (<$READ>);
                 chomp $data;
                 my @dataArray = split(//,$data);
@@ -221,7 +256,7 @@ sub changeBTOFF
                 $dataArray[6] = $BTTimeOFF[1];
 
                 $data = join('',@dataArray);
-                open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";
+                open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";
                 print $WRITE "$data";
                 close $READ;
                 close $WRITE;
@@ -232,7 +267,7 @@ sub changeBTOFF
 
 sub getLEDMode
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -244,14 +279,14 @@ sub changeLEDMode
 	{
 		my $newLEDMode = shift;
 		#print "New $newLEDMode\n";
-		open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+		open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 		my $data = (<$READ>);
 		chomp $data;
 		my @dataArray = split(//,$data);
 		my $dataArray;	
 		$dataArray[7] = $newLEDMode;
 		$data = join('',@dataArray);
-		open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";	
+		open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";	
 		print $WRITE "$data";
 		close $READ;
 		close $WRITE;
@@ -259,7 +294,7 @@ sub changeLEDMode
 		
 sub getConfirmMode
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -272,7 +307,7 @@ sub getConfirmMode
 sub changeConfirmMode
 	{
 		my $newTelMode = shift;
-		open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+		open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 		my $data = (<$READ>);
 		chomp $data;
 		my @dataArray = split(//,$data);
@@ -287,7 +322,7 @@ sub changeConfirmMode
 	
 sub getGPSMode
 	{
-		open (my $CONFIG, '/home/ubuntu/Config/config.last');
+		open (my $CONFIG, '/mnt/ramdisk/config.dat');
 		my $data =  (<$CONFIG>);
 		my @dataArray = split(//,$data);
 		my $dataArray;
@@ -307,14 +342,14 @@ sub changeGPSMode
 			}
 		else 
 			{
-				open my $READ, "/home/ubuntu/Config/config.last" or die "Could not open READ $!";
+				open my $READ, "/mnt/ramdisk/config.dat" or die "Could not open READ $!";
 				my $data = (<$READ>);
 				chomp $data;
 				my @dataArray = split(//,$data);
 				my $dataArray;	
 				$dataArray[9] = $newMode;
 				$data = join('',@dataArray);
-				open my $WRITE, "+> /home/ubuntu/Config/config.last" or die "Could not open it  $!";	
+				open my $WRITE, "+> /mnt/ramdisk/config.dat" or die "Could not open it  $!";	
 				print $WRITE "$data";
 				close $READ;
 				close $WRITE;
