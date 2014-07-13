@@ -20,9 +20,10 @@ require "/home/ubuntu/Subroutines/mail.pm";
 require "/home/ubuntu/Subroutines/time.pm";
 
 
-our $debug = 1;          # 0 - no debug, 1-is terminal STOUT, 2-STOUT to Log/main.log
+our $debug = 1;          	# 0 - no debug, 1-is terminal STOUT, 2-STOUT to Log/main.log
 my $PORT = "/dev/ttyO4";	# Iridium port
-
+my $routineTime = 5;		# Lenght of time when routine pouse before repeating itself
+my $timeMultiplication = 5; 	# For 1h = 3600 - number of seconds in hour
 
 my $telMode;
 my $telTime;
@@ -115,13 +116,14 @@ while (1)
 		if ($telMode == 0)
 			{
 				debug("TelMode is 0, no telemetry will be sent");
+				sleep($routineTime);
 			}
 		elsif ($telMode == 1)
 			{
 			
 				debug("TelMode is 1, so will send data every $telTime h");
 		
-				$telSeconds = $telTime * 60;
+				$telSeconds = $telTime * $timeMultiplication;
 				# Check from record how much time passed from last report
 				my $lastRepTime = lastRapTime();
 				my $lastExpectedTime = $lastRepTime + $telSeconds; 
@@ -129,7 +131,7 @@ while (1)
 				
 				if  ($currentTime > $lastExpectedTime)
                                         {
-                                         	debug("Sending telemetry since time passed is more than set - Mode1");
+                                         	debug("Mode1: Just starting, Sending telemetry since time passed is more than set");
                                                # sendMessage($telMessage);
                                                 sleep(1);
                                                 recordRapTime();
@@ -138,13 +140,14 @@ while (1)
 				TIMENEW1:
 		
 				my $execTime = $currentTime + $telSeconds - 1;
-			
+				$telTime = getTelTime();				
+		
 				TIMESTART1:
 					
 				# check if this is a time to end telemetry
 				if  ($currentTime > $execTime)
 					{
-   						debug("Time is up, sending telemetry Mode1");
+   						debug("Mode1: Time is up, sending telemetry");
 							#	sendMessage($telMessage);
    						sleep(1);
 						recordRapTime();								
@@ -152,24 +155,20 @@ while (1)
 					}
 
 				# Check if any message is waiting to be retrieve
-			
-				print "Checking for RI\n";
+				#print ".";
 				my $RI = checkRI();
                			if ($RI != 0)
                         		{
-                                		print "Ring was received, will retrieve message\n";
+                                		print "Mode1: Ring was received, will retrieve message\n";
                                 		#satCom();
                         		}
-
-
-				
-				sleep(5);
+				sleep($routineTime);
 				
 				# Check if telMode was changed 
 				my  $newTelMode = getTelMode();
 				if ($newTelMode != $telMode)
 					{
-						print "New tel mode detected\n";
+						debug("Mode1: New telemetry  mode detected -> $newTelMode");
 						$telMode = $newTelMode;
 						goto BEGINING;
 					}
@@ -180,7 +179,7 @@ while (1)
 				# check if telTime was changed
 				if ($newTelTime != $telTime)
 					{
-						print "New telTime introduced\n";
+						debug("Mode1: New telTime detected -> $newTelTime");
 						$telTime = $newTelTime;
 						goto TIMENEW1;
 					}
@@ -205,21 +204,31 @@ while (1)
 
                                 # check if distance is long enough to send telemetry message
 				my $distance = distanceCalc();
-				print "distance is: $distance\n";	
                                 if ($distance > $distance2Be)
                                         {
-						debug("Sending telemetry message after Distance was exeded Mode2");
+						debug("Mode2: Sending telemetry message after Distance was exeded");
                                                 sleep(1);
 						updateLastGPS();
 						goto DISTANCENEW2;
                                         }
-                                sleep(5);
+
+				# Check if any message is waiting to be retrieve
+                                #print ".";
+                                my $RI = checkRI();
+                                if ($RI != 0)
+                                        {
+                                                print "Ring was received, will retrieve message\n";
+                                                #satCom();
+                                        }
+
+
+                                sleep($routineTime);
 			
                                 # Check if telMode was changed
                                 my $newTelMode = getTelMode();
                                 if ($newTelMode != $telMode)
                                         {
-                                                print "New tel mode detected Mode2\n";
+                                                debug("New tel mode detected -> $newTelMode");
                                                 $telMode = $newTelMode;
                                                 goto BEGINING;
                                         }
@@ -230,7 +239,7 @@ while (1)
                                 # check if distance was changed
                                 if ($newDistance2Be != $distance2Be)
                                         {
-                                                print "New distance is introduced Mode2\n";
+                                                debug("Mode2: New distance detected -> $newDistance2Be");
                                                 $distance2Be = $newDistance2Be;
                                                 goto DISTANCENEW2;
                                         }
@@ -245,8 +254,9 @@ while (1)
                         {
 
                                 debug("TelMode is 3, so will send data every $telTime h or every $telDistance miles, whatever comes first");
-
-                                $telSeconds = $telTime * 60;
+				
+				$telTime = getTelTime();
+                                $telSeconds = $telTime * $timeMultiplication;
                                 # Check from record how much time passed from last report
                                 my $lastRepTime = lastRapTime();
                                 my $lastExpectedTime = $lastRepTime + $telSeconds;
@@ -262,7 +272,8 @@ while (1)
                                         }
 
                                 TIMENEW3:
-
+				$telTime = getTelTime();
+                                $telSeconds = $telTime * $timeMultiplication;
                                 my $execTime = $currentTime + $telSeconds - 1;
 
                                 TIMESTART3:
@@ -287,9 +298,6 @@ while (1)
 
                                 # check if distance is long enough to send telemetry message
                                 my $distance = distanceCalc();
-				print "Distance 2be $distance2Be\n";
-				print "Distance now $distance\n";
-
 
                                 if ($distance > $distance2Be)
                                         {
@@ -302,8 +310,7 @@ while (1)
                               
 
                                 # Check if any message is waiting to be retrieve
-
-                                print "Checking for RI\n";
+                                #print ".";
                                 my $RI = checkRI();
                                 if ($RI != 0)
                                         {
@@ -311,13 +318,13 @@ while (1)
                                                 #satCom();
                                         }
 
-				  sleep(2);
+				  sleep($routineTime);
 
                                 # Check if telMode was changed 
                                 my  $newTelMode = getTelMode();
                                 if ($newTelMode != $telMode)
                                         {
-                                                print "Mode 3: New tel mode detected\n";
+                                                debug("Mode 3: New tel mode detected -> $newTelMode");
                                                 $telMode = $newTelMode;
                                                 goto BEGINING;
                                         }
@@ -325,10 +332,10 @@ while (1)
 				 # check if telTime was changed
 
                                 my $newTelTime = getTelTime();
+		
                                 if ($newTelTime != $telTime)
                                         {
-                                                print "Mode 3: New telTime introduced\n";
-                                                $telTime = $newTelTime;
+                                                debug("Mode 3: New telTime was detected -> $newTelTime");
                                                 goto TIMENEW3;
                                         }
 
@@ -338,7 +345,7 @@ while (1)
 
 				 if ($newDistance2Be != $distance2Be)
                                         {
-                                                print "Mode 3: New distance is introduced\n";
+                                                debug("Mode 3: New distance detected -> $newDistance2Be");
                                                 $distance2Be = $newDistance2Be;
                                                 goto TIMENEW3;
                                         }
