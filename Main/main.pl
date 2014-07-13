@@ -99,6 +99,7 @@ while (1)
 
 		$telMode = getTelMode();
 		$telTime = getTelTime();
+		$telDistance = getTelDistance();
 		$BTON = getBTON();
 		$BTOFF = getBTOFF();
 		$ledMode = getLEDMode();
@@ -116,7 +117,28 @@ while (1)
 		if ($telMode == 0)
 			{
 				debug("TelMode is 0, no telemetry will be sent");
+				
+				NOTELE:
+
+				# Check if any message is waiting to be retrieve
+                                my $RI = checkRI();
+                                if ($RI != 0)
+                                        {
+                                                debug("Mode0: Ring was received, will retrieve message");
+                                        }
+				
+				# Check if telMode was changed 
+                                my  $newTelMode = getTelMode();
+                                if ($newTelMode != $telMode)
+                                        {
+                                                debug("Mode0: New telemetry  mode detected -> $newTelMode");
+                                                $telMode = $newTelMode;
+                                                goto BEGINING;
+                                        }
+
 				sleep($routineTime);
+				goto NOTELE;
+
 			}
 		elsif ($telMode == 1)
 			{
@@ -181,7 +203,7 @@ while (1)
 					{
 						debug("Mode1: New telTime detected -> $newTelTime");
 						$telTime = $newTelTime;
-						goto TIMENEW1;
+						goto BEGINING;
 					}
 				
 				goto TIMESTART1;
@@ -283,7 +305,7 @@ while (1)
                                 if  ($currentTime > $execTime)
                                         {
                                                 debug("Mode 3: Time is up, sending telemetry");
-                                                        #       sendMessage($telMessage);
+                                                # sendMessage($telMessage);
                                                 sleep(1);
                                                 recordRapTime();
 						updateLastGPS();
@@ -336,7 +358,7 @@ while (1)
                                 if ($newTelTime != $telTime)
                                         {
                                                 debug("Mode 3: New telTime was detected -> $newTelTime");
-                                                goto TIMENEW3;
+                                                goto BEGINING;
                                         }
 
 				# check in distance was changed
@@ -347,7 +369,7 @@ while (1)
                                         {
                                                 debug("Mode 3: New distance detected -> $newDistance2Be");
                                                 $distance2Be = $newDistance2Be;
-                                                goto TIMENEW3;
+                                                goto BEGINING;
                                         }
 
                                 goto TIMESTART3;
