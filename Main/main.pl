@@ -6,8 +6,6 @@ use Device::SerialPort;
 use Time::Local;
 use Geo::Calc;
 use List::Util qw( min max );
-
-
 use version; our $VERSION = qv('1.0.1');
 
 
