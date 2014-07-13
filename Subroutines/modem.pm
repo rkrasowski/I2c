@@ -347,12 +347,9 @@ sub commandProcess
 		# Check what kind of command it is
 		my $commandDesign = "$commandArray[0]"."$commandArray[1]";
 		
-		if ($commandDesign =~ m/cf/)
+		if ($commandDesign =~ m/cf/i)		# Configuration change
 			{
 				# Remove CF for Configuration
-		                shift @commandArray;
-                		shift @commandArray;
-				 # Remove CF for Configuration
                 		shift @commandArray;
                 		shift @commandArray;
 
@@ -374,10 +371,14 @@ sub commandProcess
 				debug("As per command config.last, config.dat was changed and command put into archives");
 
 			}
-		# Remove CF for Configuration
-		shift @commandArray;
-                shift @commandArray;
-
+		 if ($commandDesign =~ m/sp/i)		# request to send position now
+			{
+				# Remove SP from Command
+                                shift @commandArray;
+                                shift @commandArray;
+				#sendMessge();
+				debug("Request to send telemetry now, will do");
+			}
 
 	}
 
