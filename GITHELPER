@@ -1,3 +1,4 @@
+git add .  -> adds all files in directory
 git config --global credential.helper cache    -> keep password in cache
 git config --global credential.helper "cache --timeout=86400"         -> kepp password for time (now for 24h)
 git config credential.helper store   -> to store it permanently  doesn't seems to be working
