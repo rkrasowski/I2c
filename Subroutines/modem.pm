@@ -118,7 +118,7 @@ sub registrationNotification
                  if ($rx =~ m/OK/)
                         {
                              debug("Notification enabled");
-                   	
+ 			}                  	
 
         }
 
