@@ -18,6 +18,7 @@ while (1)
 		`echo 0 > /sys/class/gpio/gpio76/value`;
 		sleep(2);
 		#select(undef,undef,undef,0.01);
+		
  	}
 
 

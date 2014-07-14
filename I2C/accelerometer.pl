@@ -2,14 +2,14 @@
 use strict;
 use warnings;
 
-############### acceerometer.pl #####################
-#													#
+############### acceerometer.pl #########################
+#							#
 #	Reads accelemeter data via c program mma7455 	#
-#	and return x,y,z value							#
-# 	by Robert J. Krasowski							#
-#	8/7/2012										#
-#													#
-#####################################################
+#	and return x,y,z value				#
+# 	by Robert J. Krasowski				#
+#	8/7/2012					#
+#							#
+#########################################################
 
 
 while(1)
@@ -48,6 +48,6 @@ sub getAccelerometer
 		$y = $y + $yCorr;
 		$z = $z + $zCorr;
 
-		print "X = $x\nY = $y\nZ = $z\n";
+		print "X = $x\nY = $y\nZ = $z\n\n";
 	}
 

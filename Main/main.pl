@@ -68,7 +68,7 @@ $| = 1;
 debug("Serial port ttyO4 to iridium is open");
 sleep(1);
 checkModem();
-
+registrationNotification();
 
 		
 debug("Reading config data");

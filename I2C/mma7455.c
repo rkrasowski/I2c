@@ -25,7 +25,7 @@
 #define MMA7455_ZOUT8 0x8
 
 /* The name of the file */
-#define I2C_FILE_NAME "/dev/i2c-2"
+#define I2C_FILE_NAME "/dev/i2c-0"
 
 static int set_i2c_register(int file,
                             unsigned char addr,
